@@ -17,7 +17,7 @@ class Graph():
                         continue
 
                     edge = (u.name, v.name)
-                    if random() <= edges and not edge in failed:
+                    if random() <= edges and not edge in failed and not self.has_edge(edge):
                         self.add_edge(edge)
                     else:
                         failed.append((u.name, v.name))
@@ -82,7 +82,7 @@ class Graph():
 
         if type(edge) == Edge:
             if self.has_node(edge.u) and self.has_node(edge.v):
-                self.edges.append(Edge)
+                self.edges.append(edge)
             else:
                 raise ValueError(f'An edge must be between two nodes in the graph.')
         elif type(edge) in [tuple, list]:
