@@ -9,9 +9,33 @@ with redirect_stdout(None): # Suppress pygame welcome message
 import pygame.freetype
 
 class DisplayGraph(Graph):
-    def __init__(self, graph, width, height):
+    def __init__(self, graph, width = 1000, height = 1000):
         graph = deepcopy(graph)
-        super().__init__([n.ident for n in graph.nodes], [(e.u, e.v) for e in graph.edges], graph.directed)
+        
+        nodes = []
+        for n in graph.nodes:
+            if hasattr(n, 'colour'):
+                nodes.append({'name': n.name, 'colour': n.colour})
+            else:
+                nodes.append(n.name)
+
+        edges = []
+        for e in graph.edges:
+            edge = {'u': e.u, 'v': e.v}
+            
+            if hasattr(e, 'colour'):
+                edge['colour'] = e.colour
+            
+            if hasattr(e, 'label'):
+                edge['label'] = e.label
+            elif hasattr(e, 'cost'):
+                edge['label'] = e.cost
+            elif hasattr(e, 'weight'):
+                edge['label'] = e.cost
+
+            edges.append(edge)
+
+        super().__init__(nodes, edges, graph.directed)
         
         self.width = width
         self.height = height
@@ -37,12 +61,21 @@ class DisplayGraph(Graph):
         self.screen.fill((0, 0, 0))
 
         for edge in self.edges:
-            u = (self.nodes[edge.u].x, self.nodes[edge.u].y)
-            v = (self.nodes[edge.v].x, self.nodes[edge.v].y)
+            u = self.nodes[edge.u]
+            v = self.nodes[edge.v]
             
             colour = edge.colour if hasattr(edge, 'colour') else (0, 70, 180)
                                
-            pygame.draw.line(self.screen, colour, u, v, 3)
+            pygame.draw.line(self.screen, colour, (u.x, u.y), (v.x, v.y), 3)
+
+            if self.directed:
+                mid_point = (((u.x + v.x) / 2), ((u.y + v.y) / 2))
+                direction = atan2((v.y - u.y), (v.x - u.x))
+                tip_point = ((mid_point[0] + (cos(direction) * 10)), (mid_point[1] + (sin(direction) * 10)))
+                left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 10)), (mid_point[1] + (sin(direction - (pi / 2)) * 10)))
+                right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
+
+                pygame.draw.polygon(self.screen, colour, [tip_point, left_point, right_point])
 
         for n in self.nodes:
             colour = n.colour if hasattr(n, 'colour') else (0, 140, 30)                
