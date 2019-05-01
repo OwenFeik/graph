@@ -1,12 +1,13 @@
-from graph import Graph
-from math import inf, atan2, cos, sin, pi
-from random import randint
-from copy import deepcopy
+from graph import Graph # Base class
+from math import inf, atan2, cos, sin, pi # Distibrution, drawing, calculations
+from random import randint # Spread nodes out initially
+from copy import deepcopy # Build from a graph without modifying original
+from threading import Thread # Run window on a different thread
 
 from contextlib import redirect_stdout
 with redirect_stdout(None): # Suppress pygame welcome message
-    import pygame
-import pygame.freetype
+    import pygame # Rendering engine
+import pygame.freetype # Text
 
 class DisplayGraph(Graph):
     def __init__(self, graph, width = 1000, height = 1000):
@@ -71,7 +72,7 @@ class DisplayGraph(Graph):
             if self.directed:
                 mid_point = (((u.x + v.x) / 2), ((u.y + v.y) / 2))
                 direction = atan2((v.y - u.y), (v.x - u.x))
-                tip_point = ((mid_point[0] + (cos(direction) * 10)), (mid_point[1] + (sin(direction) * 10)))
+                tip_point = ((mid_point[0] + (cos(direction) * 20)), (mid_point[1] + (sin(direction) * 20)))
                 left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 10)), (mid_point[1] + (sin(direction - (pi / 2)) * 10)))
                 right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
 
@@ -122,7 +123,11 @@ class DisplayGraph(Graph):
                 node.y_force = 0
                 for other in self.nodes:
                     if node != other:
-                        force = ((min(self.width, self.height) ** 2) / len(self.nodes)) / ((abs(node.x - other.x) ** 2) + (abs(node.y - other.y) ** 2)) # k * (q1*q2)/r^2, where k is 1 (coulombs law)
+                        r_squared = ((abs(node.x - other.x) ** 2) + (abs(node.y - other.y) ** 2))
+                        if r_squared == 0:
+                            force = max(self.width, self.height) ** (1 / 2)
+                        else:
+                            force = ((min(self.width, self.height) ** 2) / len(self.nodes)) / r_squared # k * (q1*q2)/r^2, where k is 1 (coulombs law)
                         direction = atan2((node.y - other.y), (node.x - other.x))
                         node.x_force += force * cos(direction)
                         node.y_force += force * sin(direction)
@@ -150,10 +155,7 @@ class DisplayGraph(Graph):
 
             self.redraw()
 
-    def show(self):
-        self.init_window()
-        self.redraw()
-
+    def _show(self):
         running = True
         offset = (0, 0)
         holding = None
@@ -185,3 +187,8 @@ class DisplayGraph(Graph):
                         self.redraw()
             
         pygame.quit()
+
+    def show(self):
+        self.init_window()
+        self.redraw()
+        self._show()        
