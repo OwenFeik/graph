@@ -87,24 +87,27 @@ class DisplayGraph(Graph):
 
         pygame.display.update()
 
-    # def scale(self):
-    #     x = [n.x for n in self.nodes]
-    #     x = max(x) - min(x)
-    #     x = (self.height / x) * 0.8 # 80 % of screen width
+    def scale(self):
+        x = [n.x for n in self.nodes]
+        x = max(x) - min(x)
+        x = (self.height / x) * 0.8 # 80 % of screen width
         
-    #     y = [n.y for n in self.nodes]
-    #     y = max(y) - min(y)
-    #     y = (self.height / y) * 0.8 # 80 % of screen height
+        y = [n.y for n in self.nodes]
+        y = max(y) - min(y)
+        y = (self.height / y) * 0.8 # 80 % of screen height
 
-    #     for n in self.nodes:
-    #         n.x = int(n.x * x)
-    #         n.y = int(n.y * y)
-
-    #         print(f'{n.x}, {n.y}')
-
+        for n in self.nodes:
+            n.x = int(n.x * x)
+            n.y = int(n.y * y)
             
+        adjust_x = int(min([n.x for n in self.nodes]) - (0.1 * self.width))
+        adjust_y = int(min([n.y for n in self.nodes]) - (0.1 * self.height))
 
-    #     self.redraw()
+        for n in self.nodes:
+            n.x -= adjust_x
+            n.y -= adjust_y
+
+        self.redraw()
 
     def distribute(self):
         total_force = inf
@@ -173,7 +176,7 @@ class DisplayGraph(Graph):
                         self.distribute()
                     elif event.button == 3:
                         self.distribute()
-                        # self.scale()
+                        self.scale()
                 elif event.type == pygame.MOUSEMOTION:
                     if holding:                
                         x, y = event.pos
