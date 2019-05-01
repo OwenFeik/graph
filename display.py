@@ -2,7 +2,6 @@ from graph import Graph # Base class
 from math import inf, atan2, cos, sin, pi # Distibrution, drawing, calculations
 from random import randint # Spread nodes out initially
 from copy import deepcopy # Build from a graph without modifying original
-from threading import Thread # Run window on a different thread
 
 from contextlib import redirect_stdout
 with redirect_stdout(None): # Suppress pygame welcome message
@@ -10,7 +9,13 @@ with redirect_stdout(None): # Suppress pygame welcome message
 import pygame.freetype # Text
 
 class DisplayGraph(Graph):
-    def __init__(self, graph, width = 1000, height = 1000):
+
+    default_edge_colour = (0, 70, 180)
+    default_node_colour = (0, 140, 30)
+    text_colour = (255, 255, 255)
+    font_size = 14
+
+    def __init__(self, graph, width = 1000, height = 1000, show_labels = False):
         graph = deepcopy(graph)
         
         nodes = []
@@ -40,6 +45,8 @@ class DisplayGraph(Graph):
         
         self.width = width
         self.height = height
+
+        self.show_labels = show_labels
     
         self.screen = None
         self.font = None
@@ -56,7 +63,9 @@ class DisplayGraph(Graph):
         pygame.display.set_icon(pygame.image.load('icon.png'))
         
         self.screen = pygame.display.set_mode((self.width, self.height))
-        self.font = pygame.freetype.Font(None, 14)
+        self.font = pygame.freetype.Font(None, self.font_size)
+
+        self.redraw()
         
     def redraw(self):
         self.screen.fill((0, 0, 0))
@@ -65,25 +74,40 @@ class DisplayGraph(Graph):
             u = self.nodes[edge.u]
             v = self.nodes[edge.v]
             
-            colour = edge.colour if hasattr(edge, 'colour') else (0, 70, 180)
+            colour = edge.colour if hasattr(edge, 'colour') else self.default_edge_colour
                                
             pygame.draw.line(self.screen, colour, (u.x, u.y), (v.x, v.y), 3)
 
+            mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
+
             if self.directed:
-                mid_point = (((u.x + v.x) / 2), ((u.y + v.y) / 2))
                 direction = atan2((v.y - u.y), (v.x - u.x))
                 tip_point = ((mid_point[0] + (cos(direction) * 20)), (mid_point[1] + (sin(direction) * 20)))
                 left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 10)), (mid_point[1] + (sin(direction - (pi / 2)) * 10)))
                 right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
 
                 pygame.draw.polygon(self.screen, colour, [tip_point, left_point, right_point])
+            
+
+            if self.show_labels and hasattr(edge, 'label'):
+                if self.directed:
+                    self.font.render_to(self.screen, mid_point, str(edge.label), self.text_colour)
+
+                else:
+                    pygame.draw.circle(self.screen, colour, mid_point, 10, 0)
+
+                    label = str(edge.label)
+                    x_off = 2 * len(label) + 1
+                    
+                    self.font.render_to(self.screen, (mid_point[0] - x_off, mid_point[1] -5), str(edge.label), self.text_colour)
+
 
         for n in self.nodes:
-            colour = n.colour if hasattr(n, 'colour') else (0, 140, 30)                
+            colour = n.colour if hasattr(n, 'colour') else self.default_node_colour                
 
-            pygame.draw.circle(self.screen, colour, (n.x, n.y), 10, 0)
+            pygame.draw.circle(self.screen, colour, (n.x, n.y), 15, 0)
             if self.width > n.x > 0 and self.height > n.y > 0:
-                self.font.render_to(self.screen, (n.x + 20, n.y - 5), str(n.name), (255, 255, 255))            
+                self.font.render_to(self.screen, (n.x - 3, n.y - 5), str(n.name), self.text_colour)            
 
 
         pygame.display.update()
@@ -155,7 +179,7 @@ class DisplayGraph(Graph):
 
             self.redraw()
 
-    def _show(self):
+    def _run(self):
         running = True
         offset = (0, 0)
         holding = None
@@ -188,7 +212,12 @@ class DisplayGraph(Graph):
             
         pygame.quit()
 
+    def run(self):
+        self.init_window()
+        self._run()
+
     def show(self):
         self.init_window()
-        self.redraw()
-        self._show()        
+
+    def close(self):
+        pygame.quit()
