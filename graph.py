@@ -97,7 +97,7 @@ class Graph():
             if self.has_node(edge.get('u')) and self.has_node(edge.get('v')):
                 self.edges.append(Edge(**edge))
             else:
-                raise ValueError(f'A dict must contain a key \'u\' and a key \'v\', nodes in the graph.')
+                raise ValueError(f'A dict must contain a key \'u\' and a key \'v\', nodes in the graph. {edge} is not admissable.')
         else:
             raise TypeError(f'Type {type(edge)} is inadmissable as an edge.')
 

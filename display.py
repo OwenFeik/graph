@@ -9,51 +9,29 @@ with redirect_stdout(None): # Suppress pygame welcome message
 import pygame.freetype # Text
 
 class DisplayGraph(Graph):
-
-    default_edge_colour = (0, 70, 180)
-    default_node_colour = (0, 140, 30)
-    text_colour = (255, 255, 255)
-    font_size = 14
-
-    def __init__(self, graph, width = 1000, height = 1000, show_labels = False):
+    def __init__(self, graph, width = 1000, height = 1000, show_labels = False, **kwargs):
         graph = deepcopy(graph)
-        
-        nodes = []
-        for n in graph.nodes:
-            if hasattr(n, 'colour'):
-                nodes.append({'name': n.name, 'colour': n.colour})
-            else:
-                nodes.append(n.name)
 
-        edges = []
-        for e in graph.edges:
-            edge = {'u': e.u, 'v': e.v}
-            
-            if hasattr(e, 'colour'):
-                edge['colour'] = e.colour
-            
-            if hasattr(e, 'label'):
-                edge['label'] = e.label
-            elif hasattr(e, 'cost'):
-                edge['label'] = e.cost
-            elif hasattr(e, 'weight'):
-                edge['label'] = e.cost
-
-            edges.append(edge)
-
-        super().__init__(nodes, edges, graph.directed)
+        super().__init__(graph.nodes.nodes, graph.edges, graph.directed)
         
         self.width = width
         self.height = height
 
         self.show_labels = show_labels
     
+        self.default_edge_colour = kwargs['default_edge_colour'] if kwargs.get('default_edge_colour') else (0, 70, 180)
+        self.default_node_colour = kwargs['default_node_colour'] if kwargs.get('default_node_colour') else (0, 140, 30)
+        self.text_colour = kwargs['text_colour'] if kwargs.get('text_colour') else (255, 255, 255)
+        self.font_size = kwargs['font_size'] if kwargs.get('font_size') else 14
+        self.node_labels = kwargs['node_labels'] if kwargs.get('node_labels') else 'label'
+        self.edge_labels = kwargs['edge_labels'] if kwargs.get('edge_labels') else 'label'
+
         self.screen = None
         self.font = None
 
         for node in self.nodes:
-            node.x = randint(0, width)
-            node.y = randint(0, height)
+            node.x = randint(int(width * 0.1), int(width * 0.9))
+            node.y = randint(int(height * 0.1), int(height * 0.9))
             node.x_force = 0
             node.y_force = 0
 
@@ -89,21 +67,24 @@ class DisplayGraph(Graph):
                 pygame.draw.polygon(self.screen, colour, [tip_point, left_point, right_point])
             
 
-            if self.show_labels and hasattr(edge, 'label'):
+            if self.show_labels and hasattr(edge, self.edge_labels):
                 if self.directed:
-                    self.font.render_to(self.screen, mid_point, str(edge.label), self.text_colour)
+                    self.font.render_to(self.screen, mid_point, str(getattr(edge, self.edge_labels)), self.text_colour)
 
                 else:
                     pygame.draw.circle(self.screen, colour, mid_point, 10, 0)
 
-                    label = str(edge.label)
+                    label = str(getattr(edge, self.edge_labels))
                     x_off = 2 * len(label) + 1
                     
-                    self.font.render_to(self.screen, (mid_point[0] - x_off, mid_point[1] -5), str(edge.label), self.text_colour)
+                    self.font.render_to(self.screen, (mid_point[0] - x_off, mid_point[1] -5), str(getattr(edge, self.edge_labels)), self.text_colour)
 
 
         for n in self.nodes:
             colour = n.colour if hasattr(n, 'colour') else self.default_node_colour                
+
+            if self.show_labels and hasattr(n, self.node_labels):
+                self.font.render_to(self.screen, (n.x + 20, n.y - 5), str(getattr(n, self.node_labels)), self.text_colour)
 
             pygame.draw.circle(self.screen, colour, (n.x, n.y), 15, 0)
             if self.width > n.x > 0 and self.height > n.y > 0:
@@ -134,7 +115,7 @@ class DisplayGraph(Graph):
 
         self.redraw()
 
-    def distribute(self):
+    def distribute(self, animate = True):
         total_force = inf
         prev = 0
 
@@ -177,7 +158,8 @@ class DisplayGraph(Graph):
                 node.x += int(node.x_force)
                 node.y += int(node.y_force)
 
-            self.redraw()
+            if animate:
+                self.redraw()
 
     def _run(self):
         running = True
