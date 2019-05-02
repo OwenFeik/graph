@@ -9,16 +9,19 @@ with redirect_stdout(None): # Suppress pygame welcome message
 import pygame.freetype # Text
 
 class DisplayGraph(Graph):
-    def __init__(self, graph, width = 1000, height = 1000, show_labels = False, **kwargs):
+    def __init__(self, graph, width = 1000, height = 1000, **kwargs):
         graph = deepcopy(graph)
 
         super().__init__(graph.nodes.nodes, graph.edges, graph.directed)
         
         self.width = width
         self.height = height
-
-        self.show_labels = show_labels
-    
+   
+        self.show_edge_labels = kwargs['show_edge_labels'] if kwargs.get('show_edge_labels') else False
+        self.show_node_labels = kwargs['show_node_labels'] if kwargs.get('show_node_labels') else False
+        if 'show_labels' in kwargs:
+            self.show_node_labels = kwargs['show_labels']
+            self.show_edge_labels = kwargs['show_labels']
         self.default_edge_colour = kwargs['default_edge_colour'] if kwargs.get('default_edge_colour') else (0, 70, 180)
         self.default_node_colour = kwargs['default_node_colour'] if kwargs.get('default_node_colour') else (0, 140, 30)
         self.text_colour = kwargs['text_colour'] if kwargs.get('text_colour') else (255, 255, 255)
@@ -67,7 +70,7 @@ class DisplayGraph(Graph):
                 pygame.draw.polygon(self.screen, colour, [tip_point, left_point, right_point])
             
 
-            if self.show_labels and hasattr(edge, self.edge_labels):
+            if self.show_edge_labels and hasattr(edge, self.edge_labels):
                 if self.directed:
                     self.font.render_to(self.screen, mid_point, str(getattr(edge, self.edge_labels)), self.text_colour)
 
@@ -83,7 +86,7 @@ class DisplayGraph(Graph):
         for n in self.nodes:
             colour = n.colour if hasattr(n, 'colour') else self.default_node_colour                
 
-            if self.show_labels and hasattr(n, self.node_labels):
+            if self.show_node_labels and hasattr(n, self.node_labels):
                 self.font.render_to(self.screen, (n.x + 20, n.y - 5), str(getattr(n, self.node_labels)), self.text_colour)
 
             pygame.draw.circle(self.screen, colour, (n.x, n.y), 15, 0)
@@ -181,7 +184,6 @@ class DisplayGraph(Graph):
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
                         holding = None
-                        self.distribute()
                     elif event.button == 3:
                         self.distribute()
                         self.scale()

@@ -40,6 +40,6 @@ def dijkstra_animated(g, source):
             e.colour = (100, 100, 0)
         
         
-
-dijkstra_animated(DisplayGraph(g, show_labels = True, node_labels = 'dist', edge_labels = 'cost'), 0)
-
+g = DisplayGraph(g, show_labels = True, node_labels = 'dist', edge_labels = 'cost')
+dijkstra_animated(g, 0)
+g.run()
