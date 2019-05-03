@@ -126,6 +126,8 @@ class DisplayGraph(Graph):
             prev = total_force
             total_force = 0
 
+            pseudo_edges = [] # Edges that ensure lonely nodes don't get flung into the void
+
             for node in self.nodes:
                 node.x_force = 0
                 node.y_force = 0
@@ -142,9 +144,23 @@ class DisplayGraph(Graph):
 
                         total_force += force
 
-            for edge in self.edges:
-                u = self.nodes[edge.u]
-                v = self.nodes[edge.v]
+                if self.degree(node) == 0:
+                    lowest_degree_node = None
+                    lowest_degree = inf
+                    for n in self.nodes:
+                        d = self.degree(n)
+                        if 0 < d < lowest_degree:
+                            lowest_degree_node = n
+                    pseudo_edges.append((node, lowest_degree_node))
+
+
+            for edge in self.edges + pseudo_edges:
+                if type(edge) == tuple:
+                    u = edge[0]
+                    v = edge[1]
+                else:
+                    u = self.nodes[edge.u]
+                    v = self.nodes[edge.v]
                 dist = ((abs(u.x - v.x) ** 2) + (abs(u.y - v.y) ** 2)) ** (1 / 2)
                 force = -0.1 * abs((min(self.width, self.height) / 10) - dist) # Hookes law, where k is 0.1
     
