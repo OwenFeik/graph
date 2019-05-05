@@ -1,6 +1,6 @@
 from graph import Graph # Base class
 from math import inf, atan2, cos, sin, pi # Distibrution, drawing, calculations
-from random import randint # Spread nodes out initially
+from random import randint, choice # Spread nodes out initially, create pseudo-edges to random node
 from copy import deepcopy # Build from a graph without modifying original
 
 from contextlib import redirect_stdout
@@ -122,11 +122,25 @@ class DisplayGraph(Graph):
         total_force = inf
         prev = 0
 
+        pseudo_edges = [] # Edges that ensure lonely nodes don't get flung into the void
+        for node in self.nodes:
+            if self.degree(node) == 0:
+                if len(self.edges) == 0:
+                    pseudo_edges.append((node, choice(self.nodes)))
+                else:
+                    lowest_degree_nodes = []
+                    lowest_degree = inf
+                    for n in self.nodes:
+                        d = self.degree(n)
+                        if 0 < d < lowest_degree:
+                            lowest_degree_nodes = [n]
+                        elif d == lowest_degree:
+                            lowest_degree_nodes.append(n)
+                    pseudo_edges.append((node, choice(lowest_degree_nodes)))
+
         while total_force != prev:
             prev = total_force
             total_force = 0
-
-            pseudo_edges = [] # Edges that ensure lonely nodes don't get flung into the void
 
             for node in self.nodes:
                 node.x_force = 0
@@ -144,25 +158,16 @@ class DisplayGraph(Graph):
 
                         total_force += force
 
-                if self.degree(node) == 0:
-                    lowest_degree_node = None
-                    lowest_degree = inf
-                    for n in self.nodes:
-                        d = self.degree(n)
-                        if 0 < d < lowest_degree:
-                            lowest_degree_node = n
-                    pseudo_edges.append((node, lowest_degree_node))
-
-
             for edge in self.edges + pseudo_edges:
-                if type(edge) == tuple:
+                if type(edge) == tuple: # Pseudo edges are tuples of (u, v)
                     u = edge[0]
                     v = edge[1]
-                else:
+                else: # While self.edges are Edge objects
                     u = self.nodes[edge.u]
                     v = self.nodes[edge.v]
                 dist = ((abs(u.x - v.x) ** 2) + (abs(u.y - v.y) ** 2)) ** (1 / 2)
-                force = -0.1 * abs((min(self.width, self.height) / 10) - dist) # Hookes law, where k is 0.1
+                force = (-1 / len(self.nodes)) * abs((min(self.width, self.height) / 10) - dist) # Hookes law, where k is 1/|v|
+                # Scale k to avoid 'singularity' situation
     
                 total_force += force
 
