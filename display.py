@@ -9,6 +9,20 @@ with redirect_stdout(None): # Suppress pygame welcome message
 import pygame.freetype # Text
 
 class DisplayGraph(Graph):
+    background_colour = (0, 0, 0)
+    text_colour = (255, 255, 255)
+    font_size = 14
+    show_edge_labels = False
+    show_node_labels = False
+    node_labels = 'label'
+    edge_labels = 'label'
+    edge_label_colour = (0, 0, 0)
+    default_edge_colour = (255, 255, 255)
+    default_node_colour = (0, 0, 0)
+    node_border_colour = (255, 255, 255)
+    node_shape = 'square'
+    window_title = 'Graph'
+
     def __init__(self, graph, width = 1000, height = 1000, **kwargs):
         graph = deepcopy(graph)
 
@@ -16,21 +30,38 @@ class DisplayGraph(Graph):
         
         self.width = width
         self.height = height
-   
-        self.show_edge_labels = kwargs['show_edge_labels'] if kwargs.get('show_edge_labels') else False
-        self.show_node_labels = kwargs['show_node_labels'] if kwargs.get('show_node_labels') else False
+        self.screen = None
+        self.font = None
+
+        for kwarg in kwargs:
+            setattr(self, kwarg, kwargs[kwarg])
+
         if 'show_labels' in kwargs:
             self.show_node_labels = kwargs['show_labels']
             self.show_edge_labels = kwargs['show_labels']
-        self.default_edge_colour = kwargs['default_edge_colour'] if kwargs.get('default_edge_colour') else (0, 70, 180)
-        self.default_node_colour = kwargs['default_node_colour'] if kwargs.get('default_node_colour') else (0, 140, 30)
-        self.text_colour = kwargs['text_colour'] if kwargs.get('text_colour') else (255, 255, 255)
-        self.font_size = kwargs['font_size'] if kwargs.get('font_size') else 14
-        self.node_labels = kwargs['node_labels'] if kwargs.get('node_labels') else 'label'
-        self.edge_labels = kwargs['edge_labels'] if kwargs.get('edge_labels') else 'label'
-
-        self.screen = None
-        self.font = None
+        if 'colour_theme' in kwargs:
+            theme = kwargs['colour_theme'] 
+            if theme == 'dark':
+                self.background_colour = (0, 0, 0)
+                self.text_colour = (255, 255, 255)
+                self.edge_label_colour = (0, 0, 0)
+                self.default_edge_colour = (255, 255, 255)
+                self.default_node_colour = (0, 0, 0)
+                self.node_border_colour = (255, 255, 255)
+            elif theme == 'light':
+                self.background_colour = (255, 255, 255)
+                self.text_colour = (0, 0, 0)
+                self.edge_label_colour = (255, 255, 255)
+                self.default_edge_colour = (0, 0, 0)
+                self.default_node_colour = (255, 255, 255)
+                self.node_border_colour = (0, 0, 0)
+            elif theme == 'colourful_dark':
+                self.background_colour = (0, 0, 0)
+                self.text_colour = (255, 255, 255)
+                self.edge_label_colour = (255, 255, 255)
+                self.default_edge_colour = (0, 70, 180)
+                self.default_node_colour = (0, 140, 30)
+                self.node_border_colour = None
 
         for node in self.nodes:
             node.x = randint(int(width * 0.1), int(width * 0.9))
@@ -40,7 +71,7 @@ class DisplayGraph(Graph):
 
     def init_window(self):
         pygame.init()
-        pygame.display.set_caption('Graph')
+        pygame.display.set_caption(self.window_title)
         pygame.display.set_icon(pygame.image.load('icon.png'))
         
         self.screen = pygame.display.set_mode((self.width, self.height))
@@ -49,7 +80,7 @@ class DisplayGraph(Graph):
         self.redraw()
         
     def redraw(self):
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(self.background_colour)
 
         for edge in self.edges:
             u = self.nodes[edge.u]
@@ -78,20 +109,34 @@ class DisplayGraph(Graph):
                     pygame.draw.circle(self.screen, colour, mid_point, 10, 0)
 
                     label = str(getattr(edge, self.edge_labels))
-                    x_off = 2 * len(label) + 1
+                    x_off = -3 - ((len(label) // 2) * 3)
                     
-                    self.font.render_to(self.screen, (mid_point[0] - x_off, mid_point[1] -5), str(getattr(edge, self.edge_labels)), self.text_colour)
+                    self.font.render_to(self.screen, (mid_point[0] + x_off, mid_point[1] -5), label, self.edge_label_colour)
 
 
         for n in self.nodes:
             colour = n.colour if hasattr(n, 'colour') else self.default_node_colour                
+            border_colour = n.border_colour if hasattr(n, 'border_colour') else self.node_border_colour
+
+            if self.node_shape == 'circle':
+                pygame.draw.circle(self.screen, colour, (n.x, n.y), 15, 0)
+
+                if border_colour:
+                    pygame.draw.circle(self.screen, border_colour, (n.x, n.y), 17, 3)
+            elif self.node_shape == 'square':
+                rect = pygame.Rect(n.x - 10, n.y - 10, 20, 20)
+                pygame.draw.rect(self.screen, colour, rect)
+
+                if border_colour:
+                    border = pygame.Rect(n.x - 12, n.y - 12, 24, 24)
+                    pygame.draw.rect(self.screen, border_colour, border, 3)
 
             if self.show_node_labels and hasattr(n, self.node_labels):
                 self.font.render_to(self.screen, (n.x + 20, n.y - 5), str(getattr(n, self.node_labels)), self.text_colour)
 
-            pygame.draw.circle(self.screen, colour, (n.x, n.y), 15, 0)
-            if self.width > n.x > 0 and self.height > n.y > 0:
-                self.font.render_to(self.screen, (n.x - 3, n.y - 5), str(n.name), self.text_colour)            
+            if self.width > n.x > 0 and self.height > n.y > 0: # Only render labels that are on the screen
+                x_off = -3 - ((len(str(n.name)) // 2) * 3)
+                self.font.render_to(self.screen, (n.x + x_off, n.y - 5), str(n.name), self.text_colour)            
 
 
         pygame.display.update()
@@ -116,8 +161,6 @@ class DisplayGraph(Graph):
             n.x -= adjust_x
             n.y -= adjust_y
 
-        self.redraw()
-
     def distribute(self, animate = True):
         total_force = inf
         prev = 0
@@ -138,7 +181,8 @@ class DisplayGraph(Graph):
                             lowest_degree_nodes.append(n)
                     pseudo_edges.append((node, choice(lowest_degree_nodes)))
 
-        while total_force != prev:
+        running = True
+        while running and total_force != prev:
             prev = total_force
             total_force = 0
 
@@ -183,7 +227,12 @@ class DisplayGraph(Graph):
                 node.y += int(node.y_force)
 
             if animate:
-                self.redraw()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                        break
+                else:
+                    self.redraw()
 
     def _run(self):
         running = True
@@ -208,6 +257,7 @@ class DisplayGraph(Graph):
                     elif event.button == 3:
                         self.distribute()
                         self.scale()
+                        self.redraw()
                 elif event.type == pygame.MOUSEMOTION:
                     if holding:                
                         x, y = event.pos

@@ -40,6 +40,6 @@ def dijkstra_animated(g, source):
             e.colour = (100, 100, 0)
         
         
-g = DisplayGraph(g, show_labels = True, node_labels = 'dist', edge_labels = 'cost')
+g = DisplayGraph(g, show_labels = True, node_labels = 'dist', edge_labels = 'cost', window_title = 'Dijkstra\'s Algorithm', colour_theme = 'colourful_dark', node_shape = 'circle')
 dijkstra_animated(g, 0)
 g.run()
