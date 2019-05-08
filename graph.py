@@ -40,9 +40,9 @@ class Graph():
         for edge in self.edges:
             if n in [edge.u, edge.v]:
                 if n == edge.u:
-                    neighbours.append(edge.v)
+                    neighbours.append(self.nodes[edge.v])
                 elif n == edge.v:
-                    neighbours.append(edge.u)
+                    neighbours.append(self.nodes[edge.u])
 
         return neighbours
 
