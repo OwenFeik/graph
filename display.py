@@ -20,6 +20,7 @@ class DisplayGraph(Graph):
     default_edge_colour = (255, 255, 255)
     default_node_colour = (0, 0, 0)
     node_border_colour = (255, 255, 255)
+    circular_node_radius = 15
     node_shape = 'square'
     window_title = 'Graph'
 
@@ -66,8 +67,8 @@ class DisplayGraph(Graph):
         for node in self.nodes:
             node.x = randint(int(width * 0.1), int(width * 0.9))
             node.y = randint(int(height * 0.1), int(height * 0.9))
-            node.x_force = 0
-            node.y_force = 0
+            node._x_force = 0
+            node._y_force = 0
 
     def init_window(self):
         pygame.init()
@@ -117,27 +118,34 @@ class DisplayGraph(Graph):
         for n in self.nodes:
             colour = n.colour if hasattr(n, 'colour') else self.default_node_colour                
             border_colour = n.border_colour if hasattr(n, 'border_colour') else self.node_border_colour
+            text_colour = n.text_colour if hasattr(n, 'text_colour') else self.text_colour
+
+            name = self.font.render(str(n.name), text_colour)[0] # name is a pygame 'surface'
+            width, height = name.get_size()
 
             if self.node_shape == 'circle':
-                pygame.draw.circle(self.screen, colour, (n.x, n.y), 15, 0)
+                if border_colour: # If no border colour is specified, assume no borders desired
+                    pygame.draw.circle(self.screen, border_colour, (n.x, n.y), self.circular_node_radius + 3, 3)
 
-                if border_colour:
-                    pygame.draw.circle(self.screen, border_colour, (n.x, n.y), 17, 3)
+                pygame.draw.circle(self.screen, colour, (n.x, n.y), self.circular_node_radius, 0)
+                
+                self.screen.blit(name, (n.x - (width // 2), n.y - (height // 2)))
+
             elif self.node_shape == 'square':
-                rect = pygame.Rect(n.x - 10, n.y - 10, 20, 20)
+                x = n.x - (width // 2)
+                y = n.y - (height // 2)
+                rect = pygame.Rect(x, y, width + 10, height + 10)
+
+                if border_colour: # If no border colour is specified, assume no borders desired
+                    border_rect = pygame.Rect(x - 3, y - 3, width + 16, height + 16)
+                    pygame.draw.rect(self.screen, border_colour, border_rect)
+                
                 pygame.draw.rect(self.screen, colour, rect)
 
-                if border_colour:
-                    border = pygame.Rect(n.x - 12, n.y - 12, 24, 24)
-                    pygame.draw.rect(self.screen, border_colour, border, 3)
+                self.screen.blit(name, (x + 5, y + 5))
 
-            if self.show_node_labels and hasattr(n, self.node_labels):
-                self.font.render_to(self.screen, (n.x + 20, n.y - 5), str(getattr(n, self.node_labels)), self.text_colour)
-
-            if self.width > n.x > 0 and self.height > n.y > 0: # Only render labels that are on the screen
-                x_off = -3 - ((len(str(n.name)) // 2) * 3)
-                self.font.render_to(self.screen, (n.x + x_off, n.y - 5), str(n.name), self.text_colour)            
-
+                n._y_size = (height + 16) // 2 # Used to check whether the node has been clicked
+                n._x_size = (width + 16) // 2 # as above
 
         pygame.display.update()
 
@@ -187,8 +195,8 @@ class DisplayGraph(Graph):
             total_force = 0
 
             for node in self.nodes:
-                node.x_force = 0
-                node.y_force = 0
+                node._x_force = 0
+                node._y_force = 0
                 for other in self.nodes:
                     if node != other:
                         r_squared = ((abs(node.x - other.x) ** 2) + (abs(node.y - other.y) ** 2))
@@ -197,8 +205,8 @@ class DisplayGraph(Graph):
                         else:
                             force = ((min(self.width, self.height) ** 2) / len(self.nodes)) / r_squared # k * (q1*q2)/r^2, where k is 1 (coulombs law)
                         direction = atan2((node.y - other.y), (node.x - other.x))
-                        node.x_force += force * cos(direction)
-                        node.y_force += force * sin(direction)
+                        node._x_force += force * cos(direction)
+                        node._y_force += force * sin(direction)
 
                         total_force += force
 
@@ -217,14 +225,14 @@ class DisplayGraph(Graph):
 
                 direction = atan2((u.y - v.y), (u.x - v.x))
                 
-                u.x_force += force * cos(direction)
-                u.y_force += force * sin(direction)
-                v.x_force += force * cos(direction + pi) # Add pi, as force is in opposite direction
-                v.y_force += force * sin(direction + pi)
+                u._x_force += force * cos(direction)
+                u._y_force += force * sin(direction)
+                v._x_force += force * cos(direction + pi) # Add pi, as force is in opposite direction
+                v._y_force += force * sin(direction + pi)
 
             for node in self.nodes:
-                node.x += int(node.x_force)
-                node.y += int(node.y_force)
+                node.x += int(node._x_force)
+                node.y += int(node._y_force)
 
             if animate:
                 for event in pygame.event.get():
@@ -247,7 +255,14 @@ class DisplayGraph(Graph):
                     if event.button == 1:
                         for n in self.nodes:
                             m_x, m_y = event.pos
-                            if ((m_x - n.x) ** 2 + (m_y - n.y) ** 2) ** (1 / 2) <= 10:
+
+                            in_range = False
+                            if self.node_shape == 'square' and (abs(m_x - n.x) <= n._x_size and abs(m_y - n.y) <= n._y_size):
+                                in_range = True
+                            if self.node_shape == 'circle' and ((m_x - n.x) ** 2 + (m_y - n.y) ** 2) ** (1 / 2) <= self.circular_node_radius:
+                                in_range = True
+
+                            if in_range:
                                 holding = n
                                 offset = ((n.x - m_x), (n.y - m_y))
                                 break
