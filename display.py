@@ -7,6 +7,7 @@ from contextlib import redirect_stdout
 with redirect_stdout(None): # Suppress pygame welcome message
     import pygame # Rendering engine
 import pygame.freetype # Text
+import pygame.gfxdraw # Antialiased edges
 
 class DisplayGraph(Graph):
     background_colour = (0, 0, 0)
@@ -23,6 +24,7 @@ class DisplayGraph(Graph):
     circular_node_radius = 15
     node_shape = 'square'
     window_title = 'Graph'
+    edge_width = 3
 
     def __init__(self, graph, width = 1000, height = 1000, **kwargs):
         graph = deepcopy(graph)
@@ -88,18 +90,24 @@ class DisplayGraph(Graph):
             v = self.nodes[edge.v]
             
             colour = edge.colour if hasattr(edge, 'colour') else self.default_edge_colour
-                               
-            pygame.draw.line(self.screen, colour, (u.x, u.y), (v.x, v.y), 3)
 
-            mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
+            r = self.edge_width / 2
+
+            direction = atan2((v.y - u.y), (v.x - u.x))
+            u1 = int(u.x + (cos(direction + (pi / 2)) * r)), int(u.y + (sin(direction + (pi / 2)) * r))
+            u2 = int(u.x + (cos(direction - (pi / 2)) * r)), int(u.y + (sin(direction - (pi / 2)) * r))
+            v1 = int(v.x + (cos(direction + (pi / 2)) * r)), int(v.y + (sin(direction + (pi / 2)) * r))
+            v2 = int(v.x + (cos(direction - (pi / 2)) * r)), int(v.y + (sin(direction - (pi / 2)) * r))
+            pygame.gfxdraw.aapolygon(self.screen, [u1, u2, v2, v1], colour)
+            pygame.gfxdraw.filled_polygon(self.screen, [u1, u2, v2, v1], colour)    
 
             if self.directed:
-                direction = atan2((v.y - u.y), (v.x - u.x))
-                tip_point = ((mid_point[0] + (cos(direction) * 20)), (mid_point[1] + (sin(direction) * 20)))
+                mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
+                tip_point = ((mid_point[0] + (cos(direction) * 30)), (mid_point[1] + (sin(direction) * 30)))
                 left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 10)), (mid_point[1] + (sin(direction - (pi / 2)) * 10)))
-                right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
+                # right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
 
-                pygame.draw.polygon(self.screen, colour, [tip_point, left_point, right_point])
+                pygame.draw.polygon(self.screen, colour, [tip_point, left_point, mid_point])
             
 
             if self.show_edge_labels and hasattr(edge, self.edge_labels):
