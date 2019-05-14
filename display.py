@@ -10,34 +10,40 @@ import pygame.freetype # Text
 import pygame.gfxdraw # Antialiased edges
 
 class DisplayGraph(Graph):
-    background_colour = (0, 0, 0)
-    text_colour = (255, 255, 255)
-    font_size = 14
-    show_edge_labels = False
-    show_node_labels = False
-    node_labels = 'label'
-    edge_labels = 'label'
-    edge_label_colour = (0, 0, 0)
-    default_edge_colour = (255, 255, 255)
-    default_node_colour = (0, 0, 0)
-    node_border_colour = (255, 255, 255)
-    circular_node_radius = 15
-    node_shape = 'square'
-    window_title = 'Graph'
-    edge_width = 3
+    background_colour = (0, 0, 0) # Background of the graph window
+    circular_node_radius = 15 # Radius of circular nodes, square nodes are based on text size
+    default_edge_colour = (255, 255, 255) # Colour edges are drawn if they don't have a colour attribute
+    default_node_colour = (0, 0, 0) # As above, for nodes
+    edge_label_colour = (0, 0, 0) # Colour of labels on edges
+    edge_labels = 'label' # Attribute of edges to be printed as labels
+    edge_width = 3 # Width of edges between nodes
+    font_size = 14 # Font size for labels
+    node_border_colour = (255, 255, 255) # Border colour for the nodes
+    node_border_width = 3 # Width of borders around nodes
+    node_labels = 'label' # Attribute of the nodes associated with their label
+    node_shape = 'square' # Square nodes look better overall
+    node_text_padding = 5 # Space to leave between text and border of square nodes
+    show_edge_labels = False # Show edge labels such as cost on edges
+    show_node_labels = False # Show labels next to nodes such as distance etc
+    text_colour = (255, 255, 255) # Colour of text for labels
+    window_title = 'Graph' # Caption at top of window
 
     def __init__(self, graph, width = 1000, height = 1000, **kwargs):
-        graph = deepcopy(graph)
-
-        super().__init__(graph.nodes.nodes, graph.edges, graph.directed)
+        graph = deepcopy(graph) # Leave original graph as is
+        super().__init__(graph.nodes.nodes, graph.edges, graph.directed) # Make the parent a clone of the original 
         
-        self.width = width
-        self.height = height
-        self.screen = None
-        self.font = None
+        self.width = width # Window width
+        self.height = height # and height
+        self.screen = None # Pygame window used for display
+        self.font = None # Pygame font renderer
 
         for kwarg in kwargs:
             setattr(self, kwarg, kwargs[kwarg])
+
+        self.running = False
+        self.distributing = False
+        self.holding = None
+        self.holding_offset = (0, 0)
 
         if 'show_labels' in kwargs:
             self.show_node_labels = kwargs['show_labels']
@@ -94,12 +100,14 @@ class DisplayGraph(Graph):
             r = self.edge_width / 2
 
             direction = atan2((v.y - u.y), (v.x - u.x))
+
             u1 = int(u.x + (cos(direction + (pi / 2)) * r)), int(u.y + (sin(direction + (pi / 2)) * r))
             u2 = int(u.x + (cos(direction - (pi / 2)) * r)), int(u.y + (sin(direction - (pi / 2)) * r))
             v1 = int(v.x + (cos(direction + (pi / 2)) * r)), int(v.y + (sin(direction + (pi / 2)) * r))
             v2 = int(v.x + (cos(direction - (pi / 2)) * r)), int(v.y + (sin(direction - (pi / 2)) * r))
-            pygame.gfxdraw.aapolygon(self.screen, [u1, u2, v2, v1], colour)
-            pygame.gfxdraw.filled_polygon(self.screen, [u1, u2, v2, v1], colour)    
+            
+            pygame.gfxdraw.aapolygon(self.screen, [u1, u2, v2, v1], colour) # To anti-alias the line
+            pygame.gfxdraw.filled_polygon(self.screen, [u1, u2, v2, v1], colour) # Draw a polygon between two points on each node
 
             if self.directed:
                 mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
@@ -133,19 +141,26 @@ class DisplayGraph(Graph):
 
             if self.node_shape == 'circle':
                 if border_colour: # If no border colour is specified, assume no borders desired
-                    pygame.draw.circle(self.screen, border_colour, (n.x, n.y), self.circular_node_radius + 3, 3)
+                    r = self.circular_node_radius + self.node_border_width
+                    pygame.gfxdraw.aacircle(self.screen, n.x, n.y, r, border_colour)
+                    pygame.gfxdraw.filled_circle(self.screen, n.x, n.y, r, border_colour)
 
-                pygame.draw.circle(self.screen, colour, (n.x, n.y), self.circular_node_radius, 0)
+                pygame.gfxdraw.aacircle(self.screen, n.x, n.y, self.circular_node_radius, colour) # Use an aacircle to avoid jagged edges
+                pygame.gfxdraw.filled_circle(self.screen, n.x, n.y, self.circular_node_radius, colour) # Fill into the anti-aliased border
                 
-                self.screen.blit(name, (n.x - (width // 2), n.y - (height // 2)))
+                self.screen.blit(name, (n.x - (width // 2), n.y - (height // 2))) # Print the node name into the center of the circle
 
             elif self.node_shape == 'square':
                 x = n.x - (width // 2)
                 y = n.y - (height // 2)
-                rect = pygame.Rect(x, y, width + 10, height + 10)
+                p = self.node_text_padding * 2
+                width += p
+                height += p
+                rect = pygame.Rect(x, y, width, height)
 
                 if border_colour: # If no border colour is specified, assume no borders desired
-                    border_rect = pygame.Rect(x - 3, y - 3, width + 16, height + 16)
+                    p = self.node_border_width * 2
+                    border_rect = pygame.Rect(x - self.node_border_width, y - self.node_border_width, width + p, height + p)
                     pygame.draw.rect(self.screen, border_colour, border_rect)
                 
                 pygame.draw.rect(self.screen, colour, rect)
@@ -173,11 +188,13 @@ class DisplayGraph(Graph):
         adjust_x = int(min([n.x for n in self.nodes]) - (0.1 * self.width))
         adjust_y = int(min([n.y for n in self.nodes]) - (0.1 * self.height))
 
-        for n in self.nodes:
+        for n in self.nodes: # Shift scaled graph to fit on screen
             n.x -= adjust_x
             n.y -= adjust_y
 
     def distribute(self, animate = True):
+        self.distributing = True
+        
         total_force = inf
         prev = 0
 
@@ -203,6 +220,8 @@ class DisplayGraph(Graph):
             total_force = 0
 
             for node in self.nodes:
+                if hasattr(node, '_fixed') and node._fixed:
+                    continue
                 node._x_force = 0
                 node._y_force = 0
                 for other in self.nodes:
@@ -239,58 +258,62 @@ class DisplayGraph(Graph):
                 v._y_force += force * sin(direction + pi)
 
             for node in self.nodes:
+                if hasattr(node, '_fixed') and node._fixed:
+                    continue
                 node.x += int(node._x_force)
                 node.y += int(node._y_force)
 
             if animate:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        break
-                else:
+                self.handle_pygame_events()
+                self.redraw()                
+        
+        self.distributing = False
+
+    def handle_pygame_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    for n in self.nodes:
+                        m_x, m_y = event.pos
+
+                        in_range = False
+                        if self.node_shape == 'square' and (abs(m_x - n.x) <= n._x_size and abs(m_y - n.y) <= n._y_size): # If it's a square, check if the mouse position is within it's box
+                            in_range = True
+                        if self.node_shape == 'circle' and ((m_x - n.x) ** 2 + (m_y - n.y) ** 2) ** (1 / 2) <= self.circular_node_radius: # For a circle, just check against the radius
+                            in_range = True
+
+                        if in_range:
+                            self.holding = n
+                            self.holding._fixed = True # While the user holds the node, fix it for redistribution
+                            self.holding_offset = ((n.x - m_x), (n.y - m_y))
+                            break
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    if self.holding:
+                        self.holding._fixed = False
+                        self.holding = None
+                elif event.button == 3:
+                    if not self.distributing:
+                        self.distribute()
+                    self.scale()
                     self.redraw()
+            elif event.type == pygame.MOUSEMOTION:
+                if self.holding:                
+                    x, y = event.pos
+                    self.holding.x = x + self.holding_offset[0]
+                    self.holding.y = y + self.holding_offset[1]
+                    if not self.distributing:
+                        self.distribute()
 
     def _run(self):
-        running = True
-        offset = (0, 0)
-        holding = None
-
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        for n in self.nodes:
-                            m_x, m_y = event.pos
-
-                            in_range = False
-                            if self.node_shape == 'square' and (abs(m_x - n.x) <= n._x_size and abs(m_y - n.y) <= n._y_size):
-                                in_range = True
-                            if self.node_shape == 'circle' and ((m_x - n.x) ** 2 + (m_y - n.y) ** 2) ** (1 / 2) <= self.circular_node_radius:
-                                in_range = True
-
-                            if in_range:
-                                holding = n
-                                offset = ((n.x - m_x), (n.y - m_y))
-                                break
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    if event.button == 1:
-                        holding = None
-                    elif event.button == 3:
-                        self.distribute()
-                        self.scale()
-                        self.redraw()
-                elif event.type == pygame.MOUSEMOTION:
-                    if holding:                
-                        x, y = event.pos
-                        holding.x = x + offset[0]
-                        holding.y = y + offset[1]
-                        self.redraw()
-            
+        while self.running:
+            self.handle_pygame_events()
         pygame.quit()
 
     def run(self):
+        self.running = True
         self.init_window()
         self._run()
 
