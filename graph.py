@@ -223,6 +223,9 @@ class NodeList():
         else:
             raise TypeError(f'Type {type(node)} is inadmissable as a node.')
 
+    def remove(self, node):
+        self.nodes.remove(node)
+
 
 class Edge():
     def __init__(self, u, v, **kwargs):

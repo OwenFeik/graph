@@ -2,6 +2,7 @@ from graph import Graph # Base class
 from math import inf, atan2, cos, sin, pi # Distibrution, drawing, calculations
 from random import randint, choice # Spread nodes out initially, create pseudo-edges to random node
 from copy import deepcopy # Build from a graph without modifying original
+from quadtree import Quadtree
 
 from contextlib import redirect_stdout
 with redirect_stdout(None): # Suppress pygame welcome message
@@ -41,7 +42,7 @@ class DisplayGraph(Graph):
             setattr(self, kwarg, kwargs[kwarg])
 
         self.running = False
-        self.distributing = False
+        self.distributing = False # Prevent recursively calling distribution
         self.holding = None
         self.holding_offset = (0, 0)
 
@@ -77,6 +78,10 @@ class DisplayGraph(Graph):
             node.y = randint(int(height * 0.1), int(height * 0.9))
             node._x_force = 0
             node._y_force = 0
+
+        q = Quadtree(self.nodes, self.width, self.height)
+        print()
+
 
     def init_window(self):
         pygame.init()
@@ -121,7 +126,6 @@ class DisplayGraph(Graph):
             if self.show_edge_labels and hasattr(edge, self.edge_labels):
                 if self.directed:
                     self.font.render_to(self.screen, mid_point, str(getattr(edge, self.edge_labels)), self.text_colour)
-
                 else:
                     pygame.draw.circle(self.screen, colour, mid_point, 10, 0)
 
