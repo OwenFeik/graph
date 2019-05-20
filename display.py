@@ -79,9 +79,6 @@ class DisplayGraph(Graph):
             node._x_force = 0
             node._y_force = 0
 
-        q = Quadtree(self.nodes, self.width, self.height)
-        print()
-
 
     def init_window(self):
         pygame.init()
@@ -199,6 +196,8 @@ class DisplayGraph(Graph):
     def distribute(self, animate = True):
         self.distributing = True
         
+        # theta = max(0, (-30 / len(self.nodes)) + 1.5)
+        theta = 0
         total_force = inf
         prev = 0
 
@@ -218,28 +217,36 @@ class DisplayGraph(Graph):
                             lowest_degree_nodes.append(n)
                     pseudo_edges.append((node, choice(lowest_degree_nodes)))
 
-        running = True
-        while running and total_force != prev:
+        while self.running and self.distributing and total_force != prev:
             prev = total_force
             total_force = 0
+
+            quadtree = Quadtree(self.nodes, self.width, self.height)
 
             for node in self.nodes:
                 if hasattr(node, '_fixed') and node._fixed:
                     continue
+
                 node._x_force = 0
                 node._y_force = 0
+                quadtree.apply_force(node, theta)
+
+                node._x_force_ = 0
+                node._y_force_ = 0
                 for other in self.nodes:
                     if node != other:
                         r_squared = ((abs(node.x - other.x) ** 2) + (abs(node.y - other.y) ** 2))
                         if r_squared == 0:
-                            force = max(self.width, self.height) ** (1 / 2)
+                            # force = max(self.width, self.height) ** (1 / 2)
+                            force = 0
                         else:
-                            force = ((min(self.width, self.height) ** 2) / len(self.nodes)) / r_squared # k * (q1*q2)/r^2, where k is 1 (coulombs law)
+                            # force = ((min(self.width, self.height) ** 2) / len(self.nodes)) / r_squared # k * (q1*q2)/r^2
+                            force = 100000 / r_squared
                         direction = atan2((node.y - other.y), (node.x - other.x))
-                        node._x_force += force * cos(direction)
-                        node._y_force += force * sin(direction)
+                        node._x_force_ += force * cos(direction)
+                        node._y_force_ += force * sin(direction)
 
-                        total_force += force
+                #         total_force += force
 
             for edge in self.edges + pseudo_edges:
                 if type(edge) == tuple: # Pseudo edges are tuples of (u, v)
@@ -261,15 +268,24 @@ class DisplayGraph(Graph):
                 v._x_force += force * cos(direction + pi) # Add pi, as force is in opposite direction
                 v._y_force += force * sin(direction + pi)
 
+                u._x_force_ += force * cos(direction)
+                u._y_force_ += force * sin(direction)
+                v._x_force_ += force * cos(direction + pi) # Add pi, as force is in opposite direction
+                v._y_force_ += force * sin(direction + pi)
+
+
             for node in self.nodes:
                 if hasattr(node, '_fixed') and node._fixed:
                     continue
                 node.x += int(node._x_force)
                 node.y += int(node._y_force)
 
+                print(f'X of Node {node.name} N: {node._x_force_} Q: {node._x_force} D: {abs(node._x_force_ - node._x_force)}')
+                print(f'Y of Node {node.name} N: {node._y_force_} Q: {node._y_force} D: {abs(node._y_force_ - node._y_force)}')
+
             if animate:
                 self.handle_pygame_events()
-                self.redraw()                
+                self.redraw()
         
         self.distributing = False
 
