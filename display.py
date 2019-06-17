@@ -109,8 +109,8 @@ class DisplayGraph(Graph):
             pygame.gfxdraw.aapolygon(self.screen, [u1, u2, v2, v1], colour) # To anti-alias the line
             pygame.gfxdraw.filled_polygon(self.screen, [u1, u2, v2, v1], colour) # Draw a polygon between two points on each node
 
+            mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
             if self.directed:
-                mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
                 tip_point = ((mid_point[0] + (cos(direction) * 30)), (mid_point[1] + (sin(direction) * 30)))
                 left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 10)), (mid_point[1] + (sin(direction - (pi / 2)) * 10)))
                 # right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
