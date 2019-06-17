@@ -1,5 +1,5 @@
 from graph import Graph # Base class
-from math import inf, atan2, cos, sin, pi # Distibrution, drawing, calculations
+from math import inf, atan2, cos, sin, pi, ceil # Distibrution, drawing, calculations
 from random import randint, choice # Spread nodes out initially, create pseudo-edges to random node
 from copy import deepcopy # Build from a graph without modifying original
 
@@ -30,7 +30,7 @@ class DisplayGraph(Graph):
 
     def __init__(self, graph, width = 1000, height = 1000, **kwargs):
         graph = deepcopy(graph) # Leave original graph as is
-        super().__init__(graph.nodes.nodes, graph.edges, graph.directed) # Make the parent a clone of the original 
+        super().__init__(graph.nodes, graph.edges, graph.directed) # Make the parent a clone of the original 
         
         self.width = width # Window width
         self.height = height # and height
@@ -72,11 +72,22 @@ class DisplayGraph(Graph):
                 self.default_node_colour = (0, 140, 30)
                 self.node_border_colour = None
 
-        for node in self.nodes:
-            node.x = randint(int(width * 0.1), int(width * 0.9))
-            node.y = randint(int(height * 0.1), int(height * 0.9))
-            node._x_force = 0
-            node._y_force = 0
+        i = 0
+        grid_size = ceil(len(self.nodes) ** (1 / 2))
+        offset_x, offset_y = int(width * 0.1), int(height * 0.1)
+        n = len(self.nodes)
+        for y in range(0, int(self.height * 0.8), int((self.height * 0.8) / grid_size)):
+            for x in range(0, int(self.width * 0.8), int((self.width * 0.8) / grid_size)):
+                node = self.nodes[i]
+                node.x = x + offset_x
+                node.y = y + offset_y
+                node._x_force = 0
+                node._y_force = 0
+                i += 1
+                if i >= n:
+                    break
+            if i >= n:
+                break
 
     def init_window(self):
         pygame.init()

@@ -1,6 +1,6 @@
 class Graph():
     def __init__(self, nodes = None, edges = None, directed = False):
-        self.nodes = NodeList(nodes) if nodes is not None else NodeList([]) # NodeList is more flexible than a list
+        self._nodes = NodeList(nodes) if nodes is not None else NodeList([]) # NodeList is more flexible than a list
         
         self.directed = directed
         self.edges = []
@@ -11,8 +11,8 @@ class Graph():
             from random import random
 
             failed = [] # ensure an undirected graph doesn't contain (u, v) and (v, u)
-            for u in self.nodes:
-                for v in self.nodes:
+            for u in self._nodes:
+                for v in self._nodes:
                     if u == v:
                         continue
 
@@ -24,30 +24,34 @@ class Graph():
                         if not self.directed: # (u, v) and (v, u) are different in a directed graph
                             failed.append((v.name, u.name)) # but the same in an undirected graph
 
+    @property
+    def nodes(self):
+        return self._nodes.nodes
+
     def add_node(self, node):
-        self.nodes.add_node(node)
+        self._nodes.add_node(node)
 
     def has_node(self, node):
-        return node in self.nodes
+        return node in self._nodes
 
     def get_node(self, node):
-        return self.nodes[node]
+        return self._nodes[node]
 
     def get_neighbours(self, node):
-        n = self.nodes[node].name # If node is not the name, get the name
+        n = self._nodes[node].name # If node is not the name, get the name
 
         neighbours = []
         for edge in self.edges:
             if n in [edge.u, edge.v]:
                 if n == edge.u:
-                    neighbours.append(self.nodes[edge.v])
+                    neighbours.append(self._nodes[edge.v])
                 elif n == edge.v:
-                    neighbours.append(self.nodes[edge.u])
+                    neighbours.append(self._nodes[edge.u])
 
         return neighbours
 
     def get_neighbour_edges(self, node):
-        n = self.nodes[node].name # If node is not the name, get the name
+        n = self._nodes[node].name # If node is not the name, get the name
 
         neighbour_edges = []
         for edge in self.edges:
@@ -57,7 +61,7 @@ class Graph():
         return neighbour_edges
 
     def degree(self, node, direction = None):
-        n = self.nodes[node].name
+        n = self._nodes[node].name
         
         degree = 0
         if self.directed and direction:
