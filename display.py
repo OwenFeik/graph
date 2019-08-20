@@ -1,6 +1,6 @@
 from graph import Graph # Base class
-from math import inf, atan2, cos, sin, pi, ceil # Distibrution, drawing, calculations
-from random import randint, choice # Spread nodes out initially, create pseudo-edges to random node
+from math import inf, atan2, cos, sin, pi, ceil, degrees # Distibrution, drawing, calculations
+from random import choice # Spread nodes out initially, create pseudo-edges to random node
 from copy import deepcopy # Build from a graph without modifying original
 
 from contextlib import redirect_stdout
@@ -8,6 +8,7 @@ with redirect_stdout(None): # Suppress pygame welcome message
     import pygame # Rendering engine
 import pygame.freetype # Text
 import pygame.gfxdraw # Antialiased edges
+import pygame.transform # Rotate objects
 
 class DisplayGraph(Graph):
     background_colour = (0, 0, 0) # Background of the graph window
@@ -15,6 +16,7 @@ class DisplayGraph(Graph):
     default_edge_colour = (255, 255, 255) # Colour edges are drawn if they don't have a colour attribute
     default_node_colour = (0, 0, 0) # As above, for nodes
     edge_label_colour = (0, 0, 0) # Colour of labels on edges
+    edge_label_style = 'offset' # Style in which edges are labelled: can be 'offset', 'circle'
     edge_labels = 'label' # Attribute of edges to be printed as labels
     edge_width = 3 # Width of edges between nodes
     font_size = 14 # Font size for labels
@@ -105,6 +107,9 @@ class DisplayGraph(Graph):
         for edge in self.edges:
             u = self.nodes[edge.u]
             v = self.nodes[edge.v]
+
+            if u.y < v.y:
+                u, v = v, u
             
             colour = edge.colour if hasattr(edge, 'colour') else self.default_edge_colour
 
@@ -120,26 +125,31 @@ class DisplayGraph(Graph):
             pygame.gfxdraw.aapolygon(self.screen, [u1, u2, v2, v1], colour) # To anti-alias the line
             pygame.gfxdraw.filled_polygon(self.screen, [u1, u2, v2, v1], colour) # Draw a polygon between two points on each node
 
-            mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2))
+            mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2)) # Used to draw direction arrow, circle edge labels
+            left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 15)), (mid_point[1] + (sin(direction - (pi / 2)) * 15))) # Used to draw direction arrow
+
             if self.directed:
                 tip_point = ((mid_point[0] + (cos(direction) * 30)), (mid_point[1] + (sin(direction) * 30)))
-                left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 10)), (mid_point[1] + (sin(direction - (pi / 2)) * 10)))
                 # right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
 
                 pygame.draw.polygon(self.screen, colour, [tip_point, left_point, mid_point])
             
 
             if self.show_edge_labels and hasattr(edge, self.edge_labels):
+                label = str(getattr(edge, self.edge_labels))                
+        
                 if self.directed:
-                    self.font.render_to(self.screen, mid_point, str(getattr(edge, self.edge_labels)), self.text_colour)
-
-                else:
+                    self.font.render_to(self.screen, mid_point, label, self.text_colour)
+                elif self.edge_label_style == 'circle':
                     pygame.draw.circle(self.screen, colour, mid_point, 10, 0)
 
-                    label = str(getattr(edge, self.edge_labels))
                     x_off = -3 - ((len(label) // 2) * 3)
                     
                     self.font.render_to(self.screen, (mid_point[0] + x_off, mid_point[1] -5), label, self.edge_label_colour)
+                elif self.edge_label_style == 'offset':
+                    label = self.font.render(label, colour)[0]
+                    label = pygame.transform.rotozoom(label, degrees(((pi / 2) - direction) + pi / 2), 1)
+                    self.screen.blit(label, left_point)
 
 
         for n in self.nodes:

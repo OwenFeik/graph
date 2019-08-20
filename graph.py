@@ -153,7 +153,7 @@ class Node():
             setattr(self, arg, kwargs[arg])
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     @property
     def ident(self): # Backward compatability
