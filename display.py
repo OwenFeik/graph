@@ -1,11 +1,11 @@
 from graph import Graph # Base class
-import math ceil, degrees # Distibrution, drawing, calculations
+import math # Distibrution, drawing, calculations
 import random # Spread nodes out initially, create pseudo-edges to random node
 import copy # Build from a graph without modifying original
 import os # Set window position
 
-from contextlib import redirect_stdout
-with redirect_stdout(None): # Suppress pygame welcome message
+import contextlib
+with contextlib.redirect_stdout(None): # Suppress pygame welcome message
     import pygame # Rendering engine
 import pygame.freetype # Text
 import pygame.gfxdraw # Antialiased edges
@@ -78,7 +78,7 @@ class DisplayGraph(Graph):
                 self.node_border_colour = None
 
         i = 0
-        grid_size = ceil(len(self.nodes) ** (1 / 2))
+        grid_size = math.ceil(len(self.nodes) ** (1 / 2))
         offset_x, offset_y = int(width * 0.1), int(height * 0.1)
         n = len(self.nodes)
         for y in range(0, int(self.height * 0.8), int((self.height * 0.8) / grid_size)):
@@ -155,7 +155,7 @@ class DisplayGraph(Graph):
                     self.font.render_to(self.screen, (mid_point[0] + x_off, mid_point[1] -5), label, self.edge_label_colour)
                 elif self.edge_label_style == 'offset':
                     label = self.font.render(label, colour)[0]
-                    label = pygame.transform.rotozoom(label, degrees(((math.pi / 2) - direction) + math.pi / 2), 1)
+                    label = pygame.transform.rotozoom(label, math.degrees(((math.pi / 2) - direction) + math.pi / 2), 1)
                     self.screen.blit(label, left_point)
 
 
