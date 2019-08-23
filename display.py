@@ -1,7 +1,8 @@
 from graph import Graph # Base class
-from math import inf, atan2, cos, sin, pi, ceil, degrees # Distibrution, drawing, calculations
-from random import choice # Spread nodes out initially, create pseudo-edges to random node
-from copy import deepcopy # Build from a graph without modifying original
+import math ceil, degrees # Distibrution, drawing, calculations
+import random # Spread nodes out initially, create pseudo-edges to random node
+import copy # Build from a graph without modifying original
+import os # Set window position
 
 from contextlib import redirect_stdout
 with redirect_stdout(None): # Suppress pygame welcome message
@@ -28,10 +29,12 @@ class DisplayGraph(Graph):
     show_edge_labels = False # Show edge labels such as cost on edges
     show_node_labels = False # Show labels next to nodes such as distance etc
     text_colour = (255, 255, 255) # Colour of text for labels
+    window_start_centered = True # Start window in centre screen
+    # window_start_position = (0, 30) # Offset from top left
     window_title = 'Graph' # Caption at top of window
 
     def __init__(self, graph, width = 1000, height = 1000, **kwargs):
-        graph = deepcopy(graph) # Leave original graph as is
+        graph = copy.deepcopy(graph) # Leave original graph as is
         super().__init__(graph.nodes, graph.edges, graph.directed) # Make the parent a clone of the original 
         
         self.width = width # Window width
@@ -95,6 +98,10 @@ class DisplayGraph(Graph):
         pygame.init()
         pygame.display.set_caption(self.window_title)
         pygame.display.set_icon(pygame.image.load('icon.png'))
+
+        # os.environ['SDL_VIDEO_WINDOW_POS'] = f'{self.window_start_position[0],self.window_start_position[1]}' # Place window. Doesn't seem to work
+        if self.window_start_centered:
+            os.environ['SDL_VIDEO_CENTERED'] = '1' # Unreliable.
         
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.font = pygame.freetype.Font(None, self.font_size)
@@ -115,22 +122,22 @@ class DisplayGraph(Graph):
 
             r = self.edge_width / 2
 
-            direction = atan2((v.y - u.y), (v.x - u.x))
+            direction = math.atan2((v.y - u.y), (v.x - u.x))
 
-            u1 = int(u.x + (cos(direction + (pi / 2)) * r)), int(u.y + (sin(direction + (pi / 2)) * r))
-            u2 = int(u.x + (cos(direction - (pi / 2)) * r)), int(u.y + (sin(direction - (pi / 2)) * r))
-            v1 = int(v.x + (cos(direction + (pi / 2)) * r)), int(v.y + (sin(direction + (pi / 2)) * r))
-            v2 = int(v.x + (cos(direction - (pi / 2)) * r)), int(v.y + (sin(direction - (pi / 2)) * r))
+            u1 = int(u.x + (math.cos(direction + (math.pi / 2)) * r)), int(u.y + (math.sin(direction + (math.pi / 2)) * r))
+            u2 = int(u.x + (math.cos(direction - (math.pi / 2)) * r)), int(u.y + (math.sin(direction - (math.pi / 2)) * r))
+            v1 = int(v.x + (math.cos(direction + (math.pi / 2)) * r)), int(v.y + (math.sin(direction + (math.pi / 2)) * r))
+            v2 = int(v.x + (math.cos(direction - (math.pi / 2)) * r)), int(v.y + (math.sin(direction - (math.pi / 2)) * r))
             
             pygame.gfxdraw.aapolygon(self.screen, [u1, u2, v2, v1], colour) # To anti-alias the line
             pygame.gfxdraw.filled_polygon(self.screen, [u1, u2, v2, v1], colour) # Draw a polygon between two points on each node
 
             mid_point = (int((u.x + v.x) / 2), int((u.y + v.y) / 2)) # Used to draw direction arrow, circle edge labels
-            left_point = ((mid_point[0] + (cos(direction - (pi / 2)) * 15)), (mid_point[1] + (sin(direction - (pi / 2)) * 15))) # Used to draw direction arrow
+            left_point = ((mid_point[0] + (math.cos(direction - (math.pi / 2)) * 15)), (mid_point[1] + (math.sin(direction - (math.pi / 2)) * 15))) # Used to draw direction arrow
 
             if self.directed:
-                tip_point = ((mid_point[0] + (cos(direction) * 30)), (mid_point[1] + (sin(direction) * 30)))
-                # right_point = ((mid_point[0] + (cos(direction + (pi / 2)) * 10)), (mid_point[1] + (sin(direction + (pi / 2)) * 10)))
+                tip_point = ((mid_point[0] + (math.cos(direction) * 30)), (mid_point[1] + (math.sin(direction) * 30)))
+                # right_point = ((mid_point[0] + (math.cos(direction + (math.pi / 2)) * 10)), (mid_point[1] + (math.sin(direction + (math.pi / 2)) * 10)))
 
                 pygame.draw.polygon(self.screen, colour, [tip_point, left_point, mid_point])
             
@@ -148,7 +155,7 @@ class DisplayGraph(Graph):
                     self.font.render_to(self.screen, (mid_point[0] + x_off, mid_point[1] -5), label, self.edge_label_colour)
                 elif self.edge_label_style == 'offset':
                     label = self.font.render(label, colour)[0]
-                    label = pygame.transform.rotozoom(label, degrees(((pi / 2) - direction) + pi / 2), 1)
+                    label = pygame.transform.rotozoom(label, degrees(((math.pi / 2) - direction) + math.pi / 2), 1)
                     self.screen.blit(label, left_point)
 
 
@@ -216,24 +223,24 @@ class DisplayGraph(Graph):
     def distribute(self, animate = True):
         self.distributing = True
         
-        total_force = inf
+        total_force = math.inf
         prev = 0
 
         pseudo_edges = [] # Edges that ensure lonely nodes don't get flung into the void
         for node in self.nodes:
             if self.degree(node) == 0:
                 if len(self.edges) == 0:
-                    pseudo_edges.append((node, choice(self.nodes)))
+                    pseudo_edges.append((node, random.choice(self.nodes)))
                 else:
                     lowest_degree_nodes = []
-                    lowest_degree = inf
+                    lowest_degree = math.inf
                     for n in self.nodes:
                         d = self.degree(n)
                         if 0 < d < lowest_degree:
                             lowest_degree_nodes = [n]
                         elif d == lowest_degree:
                             lowest_degree_nodes.append(n)
-                    pseudo_edges.append((node, choice(lowest_degree_nodes)))
+                    pseudo_edges.append((node, random.choice(lowest_degree_nodes)))
 
         running = True
         while running and total_force != prev:
@@ -252,9 +259,9 @@ class DisplayGraph(Graph):
                             force = max(self.width, self.height) ** (1 / 2)
                         else:
                             force = ((min(self.width, self.height) ** 2) / len(self.nodes)) / r_squared # k * (q1*q2)/r^2, where k is 1 (coulombs law)
-                        direction = atan2((node.y - other.y), (node.x - other.x))
-                        node._x_force += force * cos(direction)
-                        node._y_force += force * sin(direction)
+                        direction = math.atan2((node.y - other.y), (node.x - other.x))
+                        node._x_force += force * math.cos(direction)
+                        node._y_force += force * math.sin(direction)
 
                         total_force += force
 
@@ -271,12 +278,12 @@ class DisplayGraph(Graph):
     
                 total_force += force
 
-                direction = atan2((u.y - v.y), (u.x - v.x))
+                direction = math.atan2((u.y - v.y), (u.x - v.x))
                 
-                u._x_force += force * cos(direction)
-                u._y_force += force * sin(direction)
-                v._x_force += force * cos(direction + pi) # Add pi, as force is in opposite direction
-                v._y_force += force * sin(direction + pi)
+                u._x_force += force * math.cos(direction)
+                u._y_force += force * math.sin(direction)
+                v._x_force += force * math.cos(direction + math.pi) # Add pi, as force is in opposite direction
+                v._y_force += force * math.sin(direction + math.pi)
 
             for node in self.nodes:
                 if hasattr(node, '_fixed') and node._fixed:
